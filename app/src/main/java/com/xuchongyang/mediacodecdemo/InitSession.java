@@ -67,7 +67,6 @@ public class InitSession implements RTPAppIntf {
 			decode(buf);
 			buf = null;
 		}
-
 	}
 
 	/**

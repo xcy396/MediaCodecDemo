@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
                 surfaceHolder = holder;
-                ctreateCamera(surfaceHolder);
+                createCamera(surfaceHolder);
             }
 
             @Override
@@ -111,6 +111,8 @@ public class MainActivity extends AppCompatActivity {
         mMediaCodec.stop();
         mMediaCodec.release();
         mMediaCodec = null;
+        mInitSession.rtpSession.endSession();
+        ThreadPoolManager.getDefault().shutdownNow();
     }
 
     @OnClick(R.id.begin)
@@ -126,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
      * 初始化 MediaCodec 编码器
      */
     private void initMediaCodec() {
-        int dgree = getDgree();
+        int dgree = getDegree();
         framerate = 15;
         bitrate = 2 * width * height * framerate / 20;
         EncoderDebugger debugger = EncoderDebugger.debug(getApplicationContext(), width, height);
@@ -156,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
      * @param surfaceHolder
      * @return
      */
-    private boolean ctreateCamera(SurfaceHolder surfaceHolder) {
+    private boolean createCamera(SurfaceHolder surfaceHolder) {
         try {
             mCamera = Camera.open(mCameraId);
             Camera.Parameters parameters = mCamera.getParameters();
@@ -164,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
             Camera.CameraInfo camInfo = new Camera.CameraInfo();
             Camera.getCameraInfo(mCameraId, camInfo);
             int cameraRotationOffset = camInfo.orientation;
-            int rotate = (360 + cameraRotationOffset - getDgree()) % 360;
+            int rotate = (360 + cameraRotationOffset - getDegree()) % 360;
             parameters.setRotation(rotate);
             parameters.setPreviewFormat(ImageFormat.NV21);
             List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
@@ -173,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
             mCamera.setParameters(parameters);
 //            mCamera.autoFocus(null);
             int displayRotation;
-            displayRotation = (cameraRotationOffset - getDgree() + 360) % 360;
+            displayRotation = (cameraRotationOffset - getDegree() + 360) % 360;
             mCamera.setDisplayOrientation(displayRotation);
             mCamera.setPreviewDisplay(surfaceHolder);
             return true;
@@ -258,7 +260,7 @@ public class MainActivity extends AppCompatActivity {
             ByteBuffer[] outputBuffers = mMediaCodec.getOutputBuffers();
             byte[] dst = new byte[data.length];
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
-            if (getDgree() == 0) {
+            if (getDegree() == 0) {
                 dst = Util.rotateNV21Degree90(data, previewSize.width, previewSize.height);
             } else {
                 dst = data;
@@ -311,13 +313,13 @@ public class MainActivity extends AppCompatActivity {
     };
 
     /**
-     * 分包并发送数据
+     * 将每帧进行分包并发送数据
      * @param bytes
      */
     private void sendData(byte[] bytes) {
         int dataLength = (bytes.length - 1) / 1480 + 1;
-        byte[][] data = new byte[dataLength][];
-        boolean[] marks = new boolean[dataLength];
+        final byte[][] data = new byte[dataLength][];
+        final boolean[] marks = new boolean[dataLength];
         marks[marks.length - 1] = true;
         long[] seqNumbers = new long[dataLength];
         for (int i = 0;i < dataLength;i++){
@@ -330,19 +332,25 @@ public class MainActivity extends AppCompatActivity {
         }
         int num = 0;
         do{
-            int length = bytes.length > 1480?1480 : bytes.length;
+            int length = bytes.length > 1480 ? 1480 : bytes.length;
             data[num] = Arrays.copyOf(bytes,length);
             num++;
             byte[] b = new byte[bytes.length - length];
-            for(int i = length;i<bytes.length;i++){
-                b[i-length] = bytes[i];
+            for(int i = length; i < bytes.length; i++){
+                b[i - length] = bytes[i];
             }
             bytes = b;
         } while (bytes.length > 0);
-        mInitSession.rtpSession.sendData(data,null,marks,System.currentTimeMillis(),null);
+        mInitSession.rtpSession.sendData(data, null, marks, System.currentTimeMillis(), null);
+//        ThreadPoolManager.getDefault().addTask(new Runnable() {
+//            @Override
+//            public void run() {
+//
+//            }
+//        });
     }
 
-    private int getDgree() {
+    private int getDegree() {
         int rotation = getWindowManager().getDefaultDisplay().getRotation();
         int degrees = 0;
         switch (rotation) {
