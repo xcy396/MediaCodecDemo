@@ -29,7 +29,7 @@ public class InitSession implements RTPAppIntf {
 	private static final int FRAME_RATE = 15;
 	private byte[] buf;
 
-	protected static String REMOTE_IP = "192.168.9.108";
+	protected static String REMOTE_IP = "192.168.9.114";
 	protected static int REMOTE_RTP_PORT = 8002;
 	protected static int REMOTE_RTCP_PORT = 8003;
 
@@ -45,7 +45,7 @@ public class InitSession implements RTPAppIntf {
 			Log.e(TAG, "InitSession: " + "send init session exception:"+e);
 		}
 
-		//建立会话
+			//建立会话
 		rtpSession = new RTPSession(rtpSocket, rtcpSocket);
 		rtpSession.RTPSessionRegister(this,null,null);
 		//设置参与者（目标IP地址，RTP端口，RTCP端口）
