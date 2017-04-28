@@ -26,10 +26,10 @@ public class InitSession implements RTPAppIntf {
 	private ByteBuffer[] decoderOutputBuffers;
 
 	private int mCount = 1;
-	private static final int FRAME_RATE = 15;
+	private static final int FRAME_RATE = 30;
 	private byte[] buf;
 
-	protected static String REMOTE_IP = "192.168.9.114";
+	protected static String REMOTE_IP = "192.168.9.108";
 	protected static int REMOTE_RTP_PORT = 8002;
 	protected static int REMOTE_RTCP_PORT = 8003;
 
@@ -60,7 +60,7 @@ public class InitSession implements RTPAppIntf {
 		if (buf == null){
 			buf = frame.getConcatenatedData();
 		} else {
-			buf = Util.concat(buf, frame.getConcatenatedData());
+			buf = Util.merge(buf, frame.getConcatenatedData());
 		}
 		//
 		if (frame.marked()){
@@ -78,7 +78,8 @@ public class InitSession implements RTPAppIntf {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		MediaFormat format = MediaFormat.createVideoFormat("video/avc", 640, 480);
+		MediaFormat format = MediaFormat.createVideoFormat("video/avc", 1280, 720);
+		format.setInteger(MediaFormat.KEY_COLOR_FORMAT, 19);
 		mDecoder.configure(format, mSurface, null, 0);
 		mDecoder.start();
 		decoderInputBuffers = mDecoder.getInputBuffers();
@@ -90,7 +91,7 @@ public class InitSession implements RTPAppIntf {
 	 * @param data
 	 */
 	private void decode(byte[] data) {
-		int decIndex = mDecoder.dequeueInputBuffer(0);
+		int decIndex = mDecoder.dequeueInputBuffer(-1);
 		if (decIndex >= 0) {
 			decoderInputBuffers[decIndex].clear();
 			decoderInputBuffers[decIndex].put(data);

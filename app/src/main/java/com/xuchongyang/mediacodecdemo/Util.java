@@ -85,7 +85,7 @@ public class Util {
      * @param second 合并数组
      * @return 合并后数组
      */
-    public static byte[] concat(byte[] first, byte[] second) {
+    public static byte[] merge(byte[] first, byte[] second) {
         byte[] result = Arrays.copyOf(first, first.length + second.length);
         System.arraycopy(second, 0, result, first.length, second.length);
         return result;

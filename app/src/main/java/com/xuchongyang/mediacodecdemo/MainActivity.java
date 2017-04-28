@@ -3,6 +3,8 @@ package com.xuchongyang.mediacodecdemo;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -41,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.begin)
     Button mBeginButton;
 
-    int width = 640, height = 480;
+    int width = 1280, height = 720;
     int mCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
     private MediaCodec mMediaCodec;
 
@@ -49,9 +51,13 @@ public class MainActivity extends AppCompatActivity {
     private Camera mCamera;
     private boolean started = false;
 //    private InitSession mInitSession = null;
-    private EncoderDebugger debugger;
-    private EncodeThread mEncodeThread;
     private NV21Convertor mConvertor;
+    private EncoderDebugger debugger;
+    private static final int FRAME_RATE = 30;
+
+    private EncodeThread mEncodeThread;
+    private int mCount = 1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -84,8 +90,7 @@ public class MainActivity extends AppCompatActivity {
         mRemoteSurfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
-
-                mEncodeThread =new EncodeThread(mMediaCodec,holder.getSurface());
+                mEncodeThread =new EncodeThread(MainActivity.this, mMediaCodec,holder.getSurface(), mCamera);
                 mEncodeThread.start();
             }
 
@@ -215,8 +220,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    Camera.PreviewCallback previewCallback = new Camera.PreviewCallback() {
 
+    Camera.PreviewCallback previewCallback = new Camera.PreviewCallback() {
         @Override
         public void onPreviewFrame(byte[] data, Camera camera) {
             if (data == null) {
@@ -224,22 +229,21 @@ public class MainActivity extends AppCompatActivity {
             }
             ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
             byte[] dst;
-            Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
-            if (getDegree() == 0) {
-                dst = Util.rotateNV21Degree90(data, previewSize.width, previewSize.height);
-            } else {
-                dst = data;
-            }
+            dst = data;
+//        Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
+//        if (getDegree() == 0) {
+//            dst = Util.rotateNV21Degree90(data, previewSize.width, previewSize.height);
+//        } else {
+//            dst = data;
+//        }
             try {
                 int bufferIndex = mMediaCodec.dequeueInputBuffer(0);
                 if (bufferIndex >= 0) {
                     inputBuffers[bufferIndex].clear();
-                    mConvertor = debugger.getNV21Convertor();
-                    mConvertor.convert(dst, inputBuffers[bufferIndex]);
-                    mMediaCodec.queueInputBuffer(bufferIndex, 0,
-                            inputBuffers[bufferIndex].position(),
-                            System.nanoTime() / 1000, 0);
-                    synchronized (mEncodeThread){
+                    inputBuffers[bufferIndex].put(dst);
+                    mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), mCount * 1000000 / FRAME_RATE, 0);
+                    mCount++;
+                    synchronized (mEncodeThread) {
                         mEncodeThread.notify();
                     }
                 } else {
@@ -247,9 +251,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                mCamera.addCallbackBuffer(dst);
             }
+            mCamera.addCallbackBuffer(data);
         }
 
     };
@@ -279,23 +282,69 @@ public class MainActivity extends AppCompatActivity {
      * 初始化 MediaCodec 编码器
      */
     private void initMediaCodec() {
-        int dgree = getDegree();
-        int framerate = 15;
+        int framerate = 30;
         int bitrate = 2 * width * height * framerate / 20;
+        String mimeType = "video/avc";
         debugger = EncoderDebugger.debug(getApplicationContext(), width, height);
         mConvertor = debugger.getNV21Convertor();
+
+        int numCodecs = MediaCodecList.getCodecCount();
+        MediaCodecInfo codecInfo = null;
+        for (int i = 0; i < numCodecs && codecInfo == null; i++) {
+            MediaCodecInfo info = MediaCodecList.getCodecInfoAt(i);
+            if (!info.isEncoder()) {
+                continue;
+            }
+            String[] types = info.getSupportedTypes();
+            boolean found = false;
+            for (int j = 0; j < types.length && !found; j++) {
+                if (types[j].equals(mimeType)) {
+                    found = true;
+                }
+            }
+            if (!found)
+                continue;
+            codecInfo = info;
+        }
+        if (codecInfo == null) {
+            return;
+        }
+        // Codec(エンコーダ)への入力となる色フォーマットを決定
+        // 确定颜色格式作为输入到编解码器（编码器)
+        int colorFormat = 0;
+        MediaCodecInfo.CodecCapabilities capabilities = codecInfo
+                .getCapabilitiesForType(mimeType);
+        for (int i = 0; i < capabilities.colorFormats.length; i++) {
+            int format = capabilities.colorFormats[i];
+            Log.e(TAG, "initMediaCodec: format is " + format);
+            switch (format) {
+                case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
+                case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar:
+                case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
+                case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar:
+                case MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar:
+                    if (colorFormat == 0)
+                        colorFormat = format;
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (colorFormat == 0) {
+            return;
+        }
+
         try {
             mMediaCodec = MediaCodec.createByCodecName(debugger.getEncoderName());
             MediaFormat mediaFormat;
-            if (dgree == 0) {
-                mediaFormat = MediaFormat.createVideoFormat("video/avc", height, width);
-            } else {
+//            if (dgree == 0) {
+//                mediaFormat = MediaFormat.createVideoFormat("video/avc", height, width);
+//            } else {
                 mediaFormat = MediaFormat.createVideoFormat("video/avc", width, height);
-            }
+//            }
             mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
             mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, framerate);
-            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,
-                    debugger.getEncoderColorFormat());
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, 19);
             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
             mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             mMediaCodec.start();
