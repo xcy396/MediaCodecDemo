@@ -1,23 +1,9 @@
 package com.xuchongyang.mediacodecdemo;
 
-import android.app.Activity;
-import android.content.Context;
-import android.hardware.Camera;
 import android.media.MediaCodec;
-import android.media.MediaFormat;
-import android.util.Log;
 import android.view.Surface;
-import android.view.SurfaceHolder;
 
-import com.xuchongyang.mediacodecdemo.decode.EncoderDebugger;
-import com.xuchongyang.mediacodecdemo.decode.NV21Convertor;
-
-import java.io.IOException;
-import java.io.PipedReader;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Created by Mark Xu on 17/4/27.
@@ -25,26 +11,19 @@ import java.util.List;
 
 public class EncodeThread extends Thread {
     private static final String TAG = "EncodeThread";
-    private MediaCodec mMediaCodec;
+    private MediaCodec mEncoder;
     private InitSession mInitSession;
-    private long seqNumber=0;
-    private byte[] mPpsSps = new byte[0];
-    private boolean isEncode=true;
+    private boolean isEncode = true;
     private Surface mSurface;
 
-    private Camera mCamera;
-    private Activity mActivity;
-
-
-    public EncodeThread(Activity activity, MediaCodec mediaCodec, Surface surface, Camera camera){
-        mActivity = activity;
-        this.mMediaCodec=mediaCodec;
-        this.mSurface=surface;
-        mCamera = camera;
+    public EncodeThread(MediaCodec encoder, Surface surface){
+        mEncoder = encoder;
+        mSurface = surface;
     }
+
     @Override
     public void run() {
-        this.mInitSession = new InitSession(mSurface);
+        mInitSession = new InitSession(mSurface);
         while (isEncode) {
             synchronized (this) {
                 try {
@@ -53,21 +32,25 @@ public class EncodeThread extends Thread {
                     e.printStackTrace();
                 }
             }
-            encode();
+            getEncodeData();
         }
     }
 
-    private void encode(){
-        ByteBuffer[] outputBuffers = mMediaCodec.getOutputBuffers();
+    /**
+     * 获取编码后的数据并发送
+     */
+    private void getEncodeData(){
+        // TODO: 17/4/28 移到循环外部
+        ByteBuffer[] outputBuffers = mEncoder.getOutputBuffers();
         MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
-        int outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, 0);
+        int outputBufferIndex = mEncoder.dequeueOutputBuffer(bufferInfo, 0);
         while (outputBufferIndex >= 0 && isEncode) {
             ByteBuffer outputBuffer = outputBuffers[outputBufferIndex];
             byte[] outData = new byte[bufferInfo.size];
             outputBuffer.get(outData);
             sendData(outData);
-            mMediaCodec.releaseOutputBuffer(outputBufferIndex, false);
-            outputBufferIndex = mMediaCodec.dequeueOutputBuffer(bufferInfo, 0);
+            mEncoder.releaseOutputBuffer(outputBufferIndex, false);
+            outputBufferIndex = mEncoder.dequeueOutputBuffer(bufferInfo, 0);
         }
     }
 
@@ -95,25 +78,5 @@ public class EncodeThread extends Thread {
             }
         }
         mInitSession.rtpSession.sendData(data, null, marks, -1, null);
-    }
-
-    private int getDegree() {
-        int rotation = mActivity.getWindowManager().getDefaultDisplay().getRotation();
-        int degrees = 0;
-        switch (rotation) {
-            case Surface.ROTATION_0:
-                degrees = 0;
-                break; // Natural orientation
-            case Surface.ROTATION_90:
-                degrees = 90;
-                break; // Landscape left
-            case Surface.ROTATION_180:
-                degrees = 180;
-                break;// Upside down
-            case Surface.ROTATION_270:
-                degrees = 270;
-                break;// Landscape right
-        }
-        return degrees;
     }
 }

@@ -21,7 +21,7 @@ public class InitSession implements RTPAppIntf {
 	private static final String TAG = "InitSession";
 	public RTPSession rtpSession = null;
 	private Surface mSurface;
-	private MediaCodec mDecoder;
+	public MediaCodec mDecoder;
 	private ByteBuffer[] decoderInputBuffers;
 	private ByteBuffer[] decoderOutputBuffers;
 
@@ -45,7 +45,7 @@ public class InitSession implements RTPAppIntf {
 			Log.e(TAG, "InitSession: " + "send init session exception:"+e);
 		}
 
-			//建立会话
+		//建立会话
 		rtpSession = new RTPSession(rtpSocket, rtcpSocket);
 		rtpSession.RTPSessionRegister(this,null,null);
 		//设置参与者（目标IP地址，RTP端口，RTCP端口）
@@ -62,7 +62,7 @@ public class InitSession implements RTPAppIntf {
 		} else {
 			buf = Util.merge(buf, frame.getConcatenatedData());
 		}
-		//
+		// 如果该包标记位为 true，说明为一帧的最后一包，开始进行解码操作
 		if (frame.marked()){
 			decode(buf);
 			buf = null;
