@@ -30,6 +30,8 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
+import static com.xuchongyang.mediacodecdemo.Constant.FRAME_RATE;
+
 /**
  * MainActivity
  */
@@ -42,10 +44,7 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.begin)
     Button mBeginButton;
 
-    private int width = 1280;
-    private int height = 720;
-    private static final int FRAME_RATE = 30;
-    private int bitrate = 2 * width * height * FRAME_RATE / 20;
+    private int bitrate = 2 * Constant.WIDTH * Constant.HEIGHT * FRAME_RATE / 20;
     private int mCameraId = Camera.CameraInfo.CAMERA_FACING_BACK;
     private Camera mCamera;
     private SurfaceHolder surfaceHolder;
@@ -109,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
         mEncoder.stop();
         mEncoder.release();
         mEncoder = null;
-        mEncodeThread.stop();
+        mEncodeThread.mInitSession.rtpSession.endSession();
     }
 
     @OnClick(R.id.begin)
@@ -138,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
             parameters.setRotation(rotate);
             parameters.setPreviewFormat(ImageFormat.NV21);
             List<Camera.Size> sizes = parameters.getSupportedPreviewSizes();
-            parameters.setPreviewSize(width, height);
+            parameters.setPreviewSize(Constant.WIDTH, Constant.HEIGHT);
             parameters.setPreviewFpsRange(max[0], max[1]);
             mCamera.setParameters(parameters);
 //            mCamera.autoFocus(null);
@@ -232,6 +231,7 @@ public class MainActivity extends AppCompatActivity {
             mCamera.setPreviewCallbackWithBuffer(null);
             started = false;
             mBeginButton.setText("开始");
+            mEncodeThread.isEncode = false;
         }
     }
 
@@ -255,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void initMediaCodec() {
         String mimeType = "video/avc";
-        debugger = EncoderDebugger.debug(getApplicationContext(), width, height);
+        debugger = EncoderDebugger.debug(getApplicationContext(), Constant.WIDTH, Constant.HEIGHT);
         mConvertor = debugger.getNV21Convertor();
 
         int numCodecs = MediaCodecList.getCodecCount();
@@ -310,11 +310,11 @@ public class MainActivity extends AppCompatActivity {
 //            if (dgree == 0) {
 //                mediaFormat = MediaFormat.createVideoFormat("video/avc", height, width);
 //            } else {
-                mediaFormat = MediaFormat.createVideoFormat("video/avc", width, height);
+                mediaFormat = MediaFormat.createVideoFormat("video/avc", Constant.WIDTH, Constant.HEIGHT);
 //            }
             mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
             mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
-            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, 19);
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat);
             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
             mEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             mEncoder.start();

@@ -1,9 +1,11 @@
 package com.xuchongyang.mediacodecdemo;
 
 import android.media.MediaCodec;
+import android.util.Log;
 import android.view.Surface;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * Created by Mark Xu on 17/4/27.
@@ -12,8 +14,8 @@ import java.nio.ByteBuffer;
 public class EncodeThread extends Thread {
     private static final String TAG = "EncodeThread";
     private MediaCodec mEncoder;
-    private InitSession mInitSession;
-    private boolean isEncode = true;
+    protected InitSession mInitSession;
+    protected boolean isEncode = true;
     private Surface mSurface;
 
     public EncodeThread(MediaCodec encoder, Surface surface){
@@ -78,5 +80,6 @@ public class EncodeThread extends Thread {
             }
         }
         mInitSession.rtpSession.sendData(data, null, marks, -1, null);
+        Log.e(TAG, "sendData: " + Arrays.deepToString(data));
     }
 }
