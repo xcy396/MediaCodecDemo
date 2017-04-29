@@ -202,7 +202,9 @@ public class MainActivity extends AppCompatActivity {
                         int bufferIndex = mEncoder.dequeueInputBuffer(0);
                         if (bufferIndex >= 0) {
                             inputBuffers[bufferIndex].clear();
-                            inputBuffers[bufferIndex].put(dst);
+                            mConvertor = debugger.getNV21Convertor();
+                            mConvertor.convert(dst, inputBuffers[bufferIndex]);
+//                            inputBuffers[bufferIndex].put(dst);
                             mEncoder.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), mCount * 1000000 / FRAME_RATE, 0);
                             mCount++;
                             synchronized (mEncodeThread) {
@@ -314,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
 //            }
             mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
             mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
-            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, colorFormat);
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, debugger.getEncoderColorFormat());
             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
             mEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             mEncoder.start();
