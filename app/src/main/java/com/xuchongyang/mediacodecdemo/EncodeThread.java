@@ -23,6 +23,7 @@ public class EncodeThread extends Thread {
 
     @Override
     public void run() {
+        // TODO: 17/6/15 MediaCodec 线程安全？
         mInitSession = new InitSession(mSurface);
         while (isEncode) {
             synchronized (this) {
@@ -48,6 +49,7 @@ public class EncodeThread extends Thread {
             ByteBuffer outputBuffer = outputBuffers[outputBufferIndex];
             byte[] outData = new byte[bufferInfo.size];
             outputBuffer.get(outData);
+            // TODO: 17/6/15 发送问题
             sendData(outData);
             mEncoder.releaseOutputBuffer(outputBufferIndex, false);
             outputBufferIndex = mEncoder.dequeueOutputBuffer(bufferInfo, 0);
@@ -77,6 +79,7 @@ public class EncodeThread extends Thread {
                 x++;
             }
         }
+        // TODO: 17/6/15
         mInitSession.rtpSession.sendData(data, null, marks, -1, null);
     }
 }

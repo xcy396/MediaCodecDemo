@@ -179,10 +179,10 @@ public class MainActivity extends AppCompatActivity {
             mCamera.startPreview();
             int previewFormat = mCamera.getParameters().getPreviewFormat();
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
-            int size = previewSize.width * previewSize.height
-                    * ImageFormat.getBitsPerPixel(previewFormat)
-                    / 8;
+            int size = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewFormat) / 8;
             mCamera.addCallbackBuffer(new byte[size]);
+            // Camera  采集信息回调
+            // TODO: 17/6/15 获取到数据的格式？ YUV？支持的分辨率？
             mCamera.setPreviewCallbackWithBuffer(new Camera.PreviewCallback() {
                 @Override
                 public void onPreviewFrame(byte[] data, Camera camera) {
@@ -280,10 +280,10 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // 确定编码器的颜色输入格式
+        // TODO 确定编码器的颜色输入格式
+        // TODO: 17/6/15 摄像头 API
         int colorFormat = 0;
-        MediaCodecInfo.CodecCapabilities capabilities = codecInfo
-                .getCapabilitiesForType(mimeType);
+        MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
         for (int i = 0; i < capabilities.colorFormats.length; i++) {
             int format = capabilities.colorFormats[i];
             Log.e(TAG, "initMediaCodec: format is " + format);
@@ -305,6 +305,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try {
+            Log.i(TAG, "initMediaCodec: name is " + debugger.getEncoderName());
             mEncoder = MediaCodec.createByCodecName(debugger.getEncoderName());
             MediaFormat mediaFormat;
 //            if (dgree == 0) {
@@ -314,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
 //            }
             mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, bitrate);
             mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAME_RATE);
-            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, 19);
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, debugger.getEncoderColorFormat());
             mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
             mEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             mEncoder.start();

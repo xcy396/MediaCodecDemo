@@ -151,6 +151,7 @@ public class CodecManager {
 
 		// We will use the decoder from google first, it seems to work properly on many phones
 		for (int i=0;i<sDecoders.length;i++) {
+			Log.e(TAG, "findDecodersForMimeType: " + sDecoders[i].name);
 			if (sDecoders[i].name.equalsIgnoreCase("omx.google.h264.decoder")) {
 				Codec codec = sDecoders[0];
 				sDecoders[0] = sDecoders[i];

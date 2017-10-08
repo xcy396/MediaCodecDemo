@@ -29,7 +29,7 @@ public class InitSession implements RTPAppIntf {
 	private static final int FRAME_RATE = 30;
 	private byte[] buf;
 
-	protected static String REMOTE_IP = "192.168.9.108";
+	protected static String REMOTE_IP = "192.168.9.113";
 	protected static int REMOTE_RTP_PORT = 8002;
 	protected static int REMOTE_RTCP_PORT = 8003;
 
@@ -113,7 +113,6 @@ public class InitSession implements RTPAppIntf {
 
 	public void userEvent(int type, Participant[] participant) {
 	}
-
 
 	public int frameSize(int payloadType) {
 		return 1;
