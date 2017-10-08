@@ -26,7 +26,6 @@ public class InitSession implements RTPAppIntf {
 	private ByteBuffer[] decoderOutputBuffers;
 
 	private int mCount = 1;
-	private static final int FRAME_RATE = 30;
 	private byte[] buf;
 
 	protected static String REMOTE_IP = "192.168.9.113";
@@ -49,7 +48,7 @@ public class InitSession implements RTPAppIntf {
 		rtpSession = new RTPSession(rtpSocket, rtcpSocket);
 		rtpSession.RTPSessionRegister(this,null,null);
 		//设置参与者（目标IP地址，RTP端口，RTCP端口）
-		Participant p = new Participant(REMOTE_IP, REMOTE_RTP_PORT, REMOTE_RTCP_PORT);
+		Participant p = new Participant(Constant.REMOTE_IP, REMOTE_RTP_PORT, REMOTE_RTCP_PORT);
 		rtpSession.addParticipant(p);
 
 		initDecoder();
@@ -78,7 +77,7 @@ public class InitSession implements RTPAppIntf {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		MediaFormat format = MediaFormat.createVideoFormat("video/avc", 1280, 720);
+		MediaFormat format = MediaFormat.createVideoFormat("video/avc", Constant.WIDTH, Constant.HEIGHT);
 		format.setInteger(MediaFormat.KEY_COLOR_FORMAT, 19);
 		mDecoder.configure(format, mSurface, null, 0);
 		mDecoder.start();
@@ -91,12 +90,13 @@ public class InitSession implements RTPAppIntf {
 	 * @param data
 	 */
 	private void decode(byte[] data) {
+		Log.e(TAG, "decode: " + data);
 		int decIndex = mDecoder.dequeueInputBuffer(-1);
 		if (decIndex >= 0) {
 			decoderInputBuffers[decIndex].clear();
 			decoderInputBuffers[decIndex].put(data);
 			int sampleSize = data.length;
-			mDecoder.queueInputBuffer(decIndex, 0, sampleSize, mCount * 1000000 / FRAME_RATE, 0);
+			mDecoder.queueInputBuffer(decIndex, 0, sampleSize, mCount * 1000000 / Constant.FRAME_RATE, 0);
 			mCount++;
 		}
 
